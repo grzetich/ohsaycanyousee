@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Oh say can you see — Fort Wayne fireworks</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --bg:#f5f7fb;--panel:#ffffff;--panel-2:#f1f4fa;--panel-line:#e3e7f0;
+    --ink:#111834;--muted:#566079;--faint:#8a93ad;
+    --red:#d92433;--blue:#1d4ed8;--violet:#7c3aed;
+    --good:#1d4ed8;--warn:#7c3aed;--bad:#d92433;
+    --disp:'Space Grotesk',system-ui,sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--disp);}
+  body{max-width:560px;margin:0 auto;padding:16px 14px 40px;
+    background:radial-gradient(1000px 480px at 25% -12%, #1d4ed810 0%, transparent 60%),
+      radial-gradient(900px 440px at 92% -8%, #d9243310 0%, transparent 60%),var(--bg);}
+
+  header{margin-bottom:14px;}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--faint);margin:0 0 8px;}
+  h1{font-size:33px;line-height:1.0;font-weight:700;margin:0;letter-spacing:-.02em;}
+  h1 .r{color:var(--red);} h1 .b{color:var(--blue);}
+  .sub{color:var(--muted);font-size:13.5px;line-height:1.45;margin:9px 0 0;}
+  .sub b{color:var(--ink);font-weight:600;}
+
+  .addr{display:flex;gap:8px;margin-top:16px;}
+  .addr input{flex:1 1 auto;min-width:0;background:#fff;border:1px solid var(--panel-line);
+    border-radius:11px;padding:12px 13px;color:var(--ink);font-family:var(--disp);font-size:15px;outline:none;}
+  .addr input:focus{border-color:var(--blue);box-shadow:0 0 0 3px #1d4ed822;}
+  .addr input::placeholder{color:var(--faint);}
+  .addr button{flex:0 0 auto;background:var(--blue);color:#fff;border:none;border-radius:11px;
+    padding:0 18px;font-family:var(--disp);font-weight:600;font-size:14px;cursor:pointer;transition:transform .05s,background .12s;}
+  .addr button:active{transform:scale(.97);}
+  .addr button:disabled{opacity:.5;cursor:default;}
+  .astatus{font-family:var(--mono);font-size:11px;color:var(--muted);margin:7px 3px 0;min-height:14px;letter-spacing:.02em;}
+
+  .mapwrap{position:relative;margin-top:14px;border-radius:16px;overflow:hidden;
+    border:1px solid var(--panel-line);box-shadow:0 8px 30px #1118340f;}
+  #map{height:58vh;min-height:320px;max-height:470px;width:100%;background:#e8edf5;}
+  .maphint{position:absolute;right:10px;top:10px;z-index:450;font-family:var(--mono);font-size:10.5px;
+    letter-spacing:.04em;color:var(--muted);background:#ffffffdd;border:1px solid var(--panel-line);
+    border-radius:7px;padding:5px 8px;pointer-events:none;backdrop-filter:blur(3px);}
+
+  .leaflet-container{background:#e8edf5;font-family:var(--disp);}
+  .leaflet-div-icon{background:transparent;border:none;}
+  .launch-div .lstar{color:var(--red);font-size:24px;line-height:1;text-align:center;text-shadow:0 0 8px #d9243388;}
+  .launch-div .llabel{color:var(--red);font:700 10px/1 var(--disp);text-align:center;letter-spacing:.1em;margin-top:2px;text-shadow:0 1px 3px #fff;}
+  .leaflet-tooltip.pill{background:#ffffffee;border:1px solid var(--panel-line);color:var(--ink);
+    font:600 10px var(--mono);box-shadow:0 2px 8px #1118341a;border-radius:6px;padding:2px 7px;}
+  .leaflet-tooltip.pill:before{display:none;}
+  .leaflet-control-attribution{background:#ffffffcc!important;color:#7a839c!important;font-size:9px!important;}
+  .leaflet-control-attribution a{color:var(--blue)!important;}
+  .leaflet-bar a{background:#fff!important;color:var(--ink)!important;border-color:var(--panel-line)!important;}
+  .leaflet-bar a:hover{background:#f1f4fa!important;}
+  .badge-wrap{background:transparent;border:none;}
+  .badge{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    color:#fff;font:800 12px/1 var(--disp);border:2px solid #fff;box-shadow:0 1px 4px #1118342e;}
+  .badge.sel{width:26px;height:26px;font-size:15px;box-shadow:0 2px 9px #11183450;}
+  .badge.here{box-shadow:0 0 0 4px #11183422,0 2px 8px #11183440;}
+
+  .readout{margin-top:14px;border:1px solid var(--panel-line);border-radius:14px;background:var(--panel);
+    padding:14px 15px;box-shadow:0 4px 18px #11183409;}
+  .verdict{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .vdot{width:20px;height:20px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;
+    justify-content:center;color:#fff;font-weight:800;font-size:12px;line-height:1;}
+  .vlabel{font-size:19px;font-weight:700;letter-spacing:-.01em;}
+  .vplace{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto;letter-spacing:.03em;}
+  .vnote{color:var(--muted);font-size:13px;line-height:1.5;margin:9px 0 0;}
+  .vnote b{color:var(--ink);font-weight:600;}
+
+  .factors{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px;}
+  .chip{font-family:var(--mono);font-size:10.5px;letter-spacing:.03em;border-radius:999px;padding:4px 10px;
+    border:1px solid;display:flex;align-items:center;gap:6px;}
+  .chip .cg{font-weight:800;font-size:12px;line-height:1;}
+  .chip span{color:var(--muted);}
+  .legend{display:flex;gap:16px;justify-content:center;margin-top:9px;font-family:var(--mono);font-size:11px;font-weight:600;}
+  .treesel{display:flex;align-items:center;gap:10px;margin-top:13px;flex-wrap:wrap;}
+  .tslabel{font-family:var(--mono);font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);}
+  .tsopts{display:inline-flex;background:var(--panel-2);border:1px solid var(--panel-line);border-radius:10px;padding:3px;gap:2px;}
+  .tsopts button{background:transparent;border:none;color:var(--muted);font-family:var(--disp);font-size:13px;
+    font-weight:500;padding:6px 12px;border-radius:8px;cursor:pointer;transition:background .12s,color .12s;}
+  .tsopts button.on{background:var(--blue);color:#fff;}
+
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:13px;}
+  .stat{background:var(--panel-2);border:1px solid var(--panel-line);border-radius:10px;padding:9px 10px;}
+  .stat .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);}
+  .stat .v{font-family:var(--mono);font-size:17px;font-weight:600;margin-top:3px;color:var(--ink);}
+  .stat .v small{font-size:11px;color:var(--muted);font-weight:400;}
+
+  .profcard{margin-top:12px;border:1px solid var(--panel-line);border-radius:14px;background:var(--panel);padding:12px 12px 6px;box-shadow:0 4px 18px #11183409;}
+  .proftitle{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin:0 0 4px;}
+  svg.prof{display:block;width:100%;height:auto;}
+
+  h2{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);margin:22px 2px 10px;font-weight:600;}
+  .spot{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:11px;border:1px solid var(--panel-line);
+    background:var(--panel);margin-bottom:8px;cursor:pointer;transition:border-color .15s,transform .05s,box-shadow .15s;}
+  .spot:active{transform:scale(.995);}
+  .spot.sel{border-color:var(--blue);box-shadow:0 0 0 1px #1d4ed833,0 6px 20px #11183414;}
+  .spot .pin{flex:0 0 auto;width:18px;text-align:center;font-weight:800;font-size:13px;line-height:1;}
+  .spot .nm{font-size:15px;font-weight:600;}
+  .spot .ds{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:2px;}
+  .spot .rt{margin-left:auto;font-family:var(--mono);font-size:11px;font-weight:600;text-align:right;white-space:nowrap;}
+
+  details{margin-top:20px;border-top:1px solid var(--panel-line);padding-top:14px;}
+  summary{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);cursor:pointer;list-style:none;}
+  summary::-webkit-details-marker{display:none;}
+  summary::before{content:'+ ';color:var(--red);}
+  details[open] summary::before{content:'– ';}
+  .fine{color:var(--muted);font-size:12.5px;line-height:1.6;margin-top:11px;}
+  .fine b{color:var(--ink);font-weight:600;}
+  .fine code{font-family:var(--mono);background:var(--panel-2);border:1px solid var(--panel-line);padding:1px 5px;border-radius:5px;font-size:11px;color:var(--blue);}
+  .foot{margin-top:22px;color:var(--faint);font-size:11px;font-family:var(--mono);line-height:1.6;text-align:center;}
+</style>
+</head>
+<body>
+<header>
+  <p class="eyebrow">Downtown Fort Wayne · July 4, 2026 · 10:00 PM</p>
+  <h1>Oh say can you <span class="r">see</span></h1>
+  <p class="sub">The fireworks launch from the <b>top of the Harrison Square garage</b> beside Parkview Field. Type your address, tap the map, or pick a spot below to see whether the burst canopy clears the downtown towers and the tree line from there.</p>
+</header>
+
+<div class="addr">
+  <input id="addr" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="Type an address in Fort Wayne…">
+  <button id="addrBtn">Check</button>
+</div>
+<div class="astatus" id="astatus"></div>
+
+<div class="mapwrap">
+  <div id="map"></div>
+  <div class="maphint">tap the map to test any spot</div>
+</div>
+<div class="legend">
+  <span style="color:var(--good)">✓ clear</span>
+  <span style="color:var(--warn)">! partial</span>
+  <span style="color:var(--bad)">✕ blocked</span>
+</div>
+
+<div class="readout" id="readout">
+  <div class="verdict">
+    <span class="vdot" id="vdot" style="color:var(--blue)"></span>
+    <span class="vlabel" id="vlabel">Tap the map</span>
+    <span class="vplace" id="vplace"></span>
+  </div>
+  <p class="vnote" id="vnote">Every spot is scored on distance to the burst canopy, whether the downtown high‑rises sit in the way, and how the tree line stacks up. Start with a blue pin below.</p>
+  <div class="factors" id="factors"></div>
+  <div class="treesel">
+    <span class="tslabel">Trees around you</span>
+    <div class="tsopts" id="tsopts">
+      <button data-t="open">Open</button>
+      <button data-t="scattered">Scattered</button>
+      <button data-t="leafy">Leafy</button>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="k">Distance</div><div class="v" id="s-dist">—</div></div>
+    <div class="stat"><div class="k">Face toward</div><div class="v" id="s-bear">—</div></div>
+    <div class="stat"><div class="k">Canopy angle</div><div class="v" id="s-ang">—</div></div>
+  </div>
+</div>
+
+<div class="profcard">
+  <p class="proftitle">Sightline profile — you → burst</p>
+  <svg class="prof" id="prof" viewBox="0 0 520 190" aria-label="Side profile of sightline"></svg>
+</div>
+
+<h2>Scored viewing spots</h2>
+<div id="spots"></div>
+
+<details>
+  <summary>The model &amp; assumptions</summary>
+  <p class="fine">
+    <b>Launch:</b> top of the Harrison Square parking garage, ~55 ft above street level, ground ~790 ft ASL. This year's show is <b>~4,900 lb</b> of shells.<br><br>
+    <b>Burst altitude:</b> pyrotechnicians use ~<code>100 ft per inch</code> of shell diameter. A municipal show like this runs roughly 3″–8″ shells, so bursts sit about <b>300–900 ft above the garage</b> (≈1,100–1,750 ft ASL). The model treats that band as the canopy and ~1,450 ft ASL as the marquee height.<br><br>
+    <b>Towers:</b> the downtown cluster (Anthony Wayne Building, Lincoln Tower, PNC, the 442‑ft I&amp;M Power Center) sits just northeast of the launch. If it falls between you and the garage, the low bursts hide and only the high shells clear. That's why south, west, and riverfront beat due‑northeast.<br><br>
+    <b>Trees:</b> blocking is angular, <code>atan(height / distance)</code>. A tall tree right across the street can erase a show a mile off, while distance barely dents it. In July's full leaf, an unbroken tree line is modeled as a wall up to ~3° (open) / ~14° (scattered) / ~32° (leafy) above the horizon; if that beats the canopy's elevation angle from your spot, you need an opening aimed at the launch.<br><br>
+    <b>This is a reasoning prototype, not survey data.</b> Coordinates, tower heights, and the tree presets are approximate — no per‑building or per‑canopy data yet. Good for ranking spots, not for promising a rooftop clears by 3°.
+  </p>
+</details>
+
+<p class="foot">Oh say can you see · v0.4 · map © OpenStreetMap, © CARTO<br>Launch data: City of Fort Wayne / Visit Fort Wayne, July 2026</p>
+
+<script>
+(function(){
+  "use strict";
+
+  var LAT0=41.0761, LNG0=-85.1430, LAUNCH_LL=[LAT0,LNG0];
+  var FT_LAT=364000, FT_LNG=364000*Math.cos(LAT0*Math.PI/180);
+  function xy(lat,lng){ return { e:(lng-LNG0)*FT_LNG, n:(lat-LAT0)*FT_LAT }; }
+  function invLL(e,n){ return [ LAT0 + n/FT_LAT, LNG0 + e/FT_LNG ]; }
+
+  var GROUND=790, EYE=GROUND+5.5, PLAT=GROUND+55;
+  var CANOPY_LOW=PLAT+250, CANOPY_HI=PLAT+900, CANOPY_MID=PLAT+600;
+  var TOWER_TOP=GROUND+250;
+  var TOWERS=[ {e:500,n:500},{e:700,n:1600},{e:1600,n:1500},{e:1500,n:500} ];
+
+  var TREE={ open:{deg:3,label:'open ground'}, scattered:{deg:14,label:'scattered trees'}, leafy:{deg:32,label:'leafy street'} };
+  var treeState='scattered';
+
+  var HEX={good:'#1d4ed8',warn:'#7c3aed',bad:'#d92433',red:'#d92433',blue:'#1d4ed8',
+    faint:'#8a93ad',muted:'#566079',ground:'#cbd3e1',tree:'#64748b',column:'#9aa3bf',towerblk:'#94a3b8'};
+  function colHex(c){return c==='var(--good)'?HEX.good:c==='var(--warn)'?HEX.warn:c==='var(--bad)'?HEX.bad:c;}
+  function symFor(color){return color==='var(--good)'?'✓':color==='var(--bad)'?'✕':'!';}
+  function badge(hex,sym,extra){
+    return L.divIcon({className:'badge-wrap',
+      html:'<div class="badge'+(extra?' '+extra:'')+'" style="background:'+hex+'">'+sym+'</div>',
+      iconSize:[20,20],iconAnchor:[10,10]});
+  }
+
+  var SPOTS=[
+    {id:'pkv', name:'Parkview Field (seats)', lat:41.0753,lng:-85.1447, trees:'open',
+      note:'Ticketed TinCaps seats sit directly under the show, and you stay after the game. The closest legal view there is.'},
+    {id:'hw', name:'Headwaters Park', lat:41.0808,lng:-85.1435, trees:'open',
+      note:'Open lawn on the St. Marys just north of downtown. Wide sky and an easy exit.'},
+    {id:'pm', name:'Promenade Park', lat:41.0828,lng:-85.1418, trees:'open',
+      note:'Riverfront green space a little farther north, with open sky over the water.'},
+    {id:'wc', name:'West Central (Nelson & Jefferson)', lat:41.0762,lng:-85.1492, trees:'leafy',
+      note:'Quiet residential streets due west. Beautiful, but a historic neighborhood with big mature trees, so you need an open street or lot.'},
+    {id:'bw', name:'Broadway corridor', lat:41.0700,lng:-85.1530, trees:'scattered',
+      note:'City‑recommended stretch southwest of downtown, clear of the office towers.'},
+    {id:'gw', name:'Grand Wayne / Jefferson', lat:41.0772,lng:-85.1401, trees:'scattered',
+      note:'City‑recommended and steps from the launch, but you are down among the buildings. Look for a west‑facing gap.'},
+    {id:'lk', name:'Lakeside Park (NE)', lat:41.0890,lng:-85.1280, trees:'leafy',
+      note:'Northeast of downtown, on the far side of the towers, and a leafy old neighborhood on top of that.'}
+  ];
+
+  function dist(a,b){var de=a.e-b.e,dn=a.n-b.n;return Math.sqrt(de*de+dn*dn);}
+  function segInt(p,q,a,b){
+    var r={x:q.e-p.e,y:q.n-p.n}, s={x:b.e-a.e,y:b.n-a.n};
+    var d=r.x*s.y-r.y*s.x; if(Math.abs(d)<1e-9)return null;
+    var t=((a.e-p.e)*s.y-(a.n-p.n)*s.x)/d, u=((a.e-p.e)*r.y-(a.n-p.n)*r.x)/d;
+    if(t>=0&&t<=1&&u>=0&&u<=1)return {e:p.e+t*r.x,n:p.n+t*r.y};
+    return null;
+  }
+  function towerBlock(V){
+    var best=null;
+    for(var i=0;i<TOWERS.length;i++){
+      var hit=segInt(V,{e:0,n:0},TOWERS[i],TOWERS[(i+1)%TOWERS.length]);
+      if(hit){var dd=dist(V,hit); if(best===null||dd<best)best=dd;}
+    }
+    return best;
+  }
+  function bearingToLaunch(V){
+    var deg=Math.atan2(-V.e,-V.n)*180/Math.PI; if(deg<0)deg+=360;
+    var names=['N','NE','E','SE','S','SW','W','NW'];
+    return {deg:deg, name:names[Math.round(deg/45)%8]};
+  }
+
+  function evaluate(V,treeDeg){
+    if(treeDeg==null)treeDeg=TREE[treeState].deg;
+    var D=dist(V,{e:0,n:0}), mi=D/5280, bear=bearingToLaunch(V), DD=Math.max(D,30);
+    var angMid=Math.atan2(CANOPY_MID-EYE,DD)*180/Math.PI;
+    var angLow=Math.atan2(CANOPY_LOW-EYE,DD)*180/Math.PI;
+    var angHigh=Math.atan2(CANOPY_HI-EYE,DD)*180/Math.PI;
+    var block=towerBlock(V), minClear=null, blocked=false, towerKind='clear';
+    if(block!==null && block<D-40){ minClear=EYE+(TOWER_TOP-EYE)*(D/block); blocked=true;
+      towerKind=(minClear>CANOPY_HI)?'blocked':'high-only'; }
+    var treeKind=(treeDeg<=angLow+0.5)?'clear':(treeDeg<angHigh?'partial':'blocked');
+
+    var label,color,note;
+    if(towerKind==='blocked'){ label='Towers block it'; color='var(--bad)';
+      note='The downtown towers cover the whole canopy from here. Move <b>around</b> the cluster — south, west, or to the riverfront.';
+    } else if(towerKind==='high-only'){ var pct=Math.round(100*(minClear-CANOPY_LOW)/(CANOPY_HI-CANOPY_LOW));
+      label='High shells only'; color='var(--warn)';
+      note='Towers hide the low, wide bursts (~bottom '+pct+'% of the canopy). The big aerial shells still clear the rooftops. Face <b>'+bear.name+'</b> and look high.';
+    } else if(mi<0.075){ label='On top of it'; color='var(--warn)';
+      note='Immersive but you will crane your neck, and this close you may be inside the closed safety zone. Great if you have a legit spot.';
+    } else if(mi<=0.9){ label='Prime'; color='var(--good)';
+      note='Open sightline in the sweet spot. The full canopy fills the sky — low bursts and high shells both read clearly.';
+    } else if(mi<=2.0){ label='Good'; color='var(--good)';
+      note='Clear shot. High shells stand out well; the lowest bursts hug the downtown rooftops. Comfortable, uncrowded distance.';
+    } else if(mi<=3.5){ label='Distant'; color='var(--warn)';
+      note='Only the high aerial shells register and they look small. Fine as a backyard view, not a destination.';
+    } else { label='Too far'; color='var(--bad)';
+      note='Beyond a comfortable range — the show is a low sparkle on the horizon.'; }
+
+    if(treeKind==='blocked' && color!=='var(--bad)'){
+      label='Trees block it'; color='var(--bad)';
+      note='At this distance the canopy sits low in the sky, and an unbroken July tree line rises above it, so a wall of leaves hides the show. You need a real opening aimed <b>'+bear.name+'</b>: an open street, a park edge, a parking lot, or the riverbank.';
+    } else if(treeKind==='partial'){
+      if(color==='var(--good)'){ label='Find a gap'; color='var(--warn)'; }
+      note+=' In full leaf the treetops also clip the lower bursts, so line up a clear lane facing <b>'+bear.name+'</b> and the high shells come through.';
+    } else if(treeKind==='clear' && color==='var(--good)'){
+      note+=' Sky is open enough overhead here.';
+    }
+
+    return {D:D,mi:mi,bear:bear,angMid:angMid,angLow:angLow,angHigh:angHigh,block:block,
+      minClear:minClear,blocked:blocked,towerKind:towerKind,treeKind:treeKind,treeDeg:treeDeg,
+      label:label,color:color,note:note};
+  }
+
+  // ---- map (Leaflet, light tiles) ----
+  var map=L.map('map',{zoomControl:true,attributionControl:true,scrollWheelZoom:false}).setView(LAUNCH_LL,15);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
+    subdomains:'abcd', maxZoom:20, attribution:'&copy; OpenStreetMap &copy; CARTO'
+  }).addTo(map);
+
+  var staticLayer=L.layerGroup().addTo(map);
+  var dynLayer=L.layerGroup().addTo(map);
+
+  [[402,'¼ mi'],[805,'½ mi'],[1609,'1 mi'],[2414,'1½ mi']].forEach(function(r){
+    L.circle(LAUNCH_LL,{radius:r[0],color:HEX.blue,weight:1,opacity:.28,fill:false,dashArray:'3 7',interactive:false}).addTo(staticLayer);
+  });
+  var towerLL=TOWERS.map(function(p){return invLL(p.e,p.n);});
+  L.polygon(towerLL,{color:HEX.blue,weight:1,opacity:.5,fillColor:HEX.blue,fillOpacity:.12,interactive:false})
+    .addTo(staticLayer).bindTooltip('office towers',{permanent:true,direction:'center',className:'pill'});
+  var launchIcon=L.divIcon({className:'launch-div',html:'<div class="lstar">★</div><div class="llabel">LAUNCH</div>',iconSize:[70,46],iconAnchor:[35,20]});
+  L.marker(LAUNCH_LL,{icon:launchIcon,interactive:false,zIndexOffset:1000}).addTo(staticLayer);
+
+  SPOTS.forEach(function(sp){
+    var p=xy(sp.lat,sp.lng); sp._xy={e:p.e,n:p.n}; sp._ll=[sp.lat,sp.lng];
+    sp._ev=evaluate(sp._xy,TREE[sp.trees].deg);
+    sp._marker=L.marker(sp._ll,{icon:badge(colHex(sp._ev.color),symFor(sp._ev.color)),keyboard:false})
+      .addTo(staticLayer).on('click',function(){selectSpot(sp);});
+  });
+
+  function frame(ll){ map.fitBounds(L.latLngBounds([ll,LAUNCH_LL]).pad(0.45),{maxZoom:16,animate:true}); }
+
+  var vdot=document.getElementById('vdot'),vlabel=document.getElementById('vlabel'),
+      vplace=document.getElementById('vplace'),vnote=document.getElementById('vnote'),
+      sDist=document.getElementById('s-dist'),sBear=document.getElementById('s-bear'),
+      sAng=document.getElementById('s-ang'),factorsEl=document.getElementById('factors');
+
+  var STATE_COLOR={clear:'var(--good)','high-only':'var(--warn)',partial:'var(--warn)',blocked:'var(--bad)'};
+  var STATE_WORD={clear:'clear','high-only':'high shells',partial:'clip lows',blocked:'blocked'};
+  var STATE_SYM={clear:'✓','high-only':'!',partial:'!',blocked:'✕'};
+  function chip(name,kind){
+    return '<span class="chip" style="color:'+STATE_COLOR[kind]+';border-color:'+STATE_COLOR[kind]+'44">'+
+      '<b class="cg">'+STATE_SYM[kind]+'</b><span>'+name+'</span>&nbsp;'+STATE_WORD[kind]+'</span>';
+  }
+  var cur={V:null,place:null,opts:null};
+
+  function drawSelection(V,ev,opts){
+    dynLayer.clearLayers();
+    var ll=invLL(V.e,V.n), hex=colHex(ev.color);
+    L.polyline([ll,LAUNCH_LL],{color:hex,weight:3,opacity:.9,dashArray:'8 7',interactive:false}).addTo(dynLayer);
+    var mk=L.marker(ll,{icon:badge(hex,symFor(ev.color),'here'),keyboard:false,zIndexOffset:900}).addTo(dynLayer);
+    if(opts&&opts.label) mk.bindTooltip(opts.label,{permanent:true,direction:'top',className:'pill',offset:[0,-12]}).openTooltip();
+  }
+
+  function show(ev,V,place,opts){
+    cur={V:V,place:place,opts:opts};
+    vdot.style.background=colHex(ev.color); vdot.textContent=symFor(ev.color);
+    vlabel.textContent=ev.label; vlabel.style.color=ev.color;
+    vplace.textContent=place||'dropped pin';
+    vnote.innerHTML=ev.note;
+    factorsEl.innerHTML=chip('Towers',ev.towerKind)+chip('Trees',ev.treeKind);
+    sDist.innerHTML=ev.mi.toFixed(2)+' <small>mi</small>';
+    sBear.innerHTML=ev.bear.name+' <small>'+Math.round(ev.bear.deg)+'°</small>';
+    sAng.innerHTML=Math.round(ev.angMid)+'<small>° up</small>';
+    drawSelection(V,ev,opts);
+    drawProfile(V,ev);
+  }
+  function reshow(){ if(cur.V) show(evaluate(cur.V,TREE[treeState].deg),cur.V,cur.place,cur.opts); }
+  function setTree(t){
+    treeState=t;
+    Array.prototype.forEach.call(document.querySelectorAll('#tsopts button'),function(b){
+      b.classList.toggle('on',b.getAttribute('data-t')===t);});
+    reshow();
+  }
+
+  var NS='http://www.w3.org/2000/svg', prof=document.getElementById('prof');
+  function el(t,a){var n=document.createElementNS(NS,t);for(var k in a)n.setAttribute(k,a[k]);return n;}
+  function drawProfile(V,ev){
+    while(prof.firstChild)prof.removeChild(prof.firstChild);
+    var W=520,H=190,padL=8,padR=14,padT=10,padB=22;
+    var D=Math.max(ev.D,200), xMax=D*1.06;
+    var altBase=GROUND-20, altTop=CANOPY_HI+180, hex=colHex(ev.color);
+    function sx(d){return padL+(d/xMax)*(W-padL-padR);}
+    function sy(a){return padT+(1-(a-altBase)/(altTop-altBase))*(H-padT-padB);}
+    prof.appendChild(el('line',{x1:0,y1:sy(GROUND),x2:W,y2:sy(GROUND),stroke:HEX.ground,'stroke-width':2}));
+    var gl=el('text',{x:4,y:sy(GROUND)+15,fill:HEX.faint,'font-size':9,'font-family':'IBM Plex Mono, monospace'});
+    gl.textContent='ground'; prof.appendChild(gl);
+    var lx=sx(D);
+    prof.appendChild(el('rect',{x:lx-16,y:sy(CANOPY_HI),width:32,height:sy(CANOPY_LOW)-sy(CANOPY_HI),
+      fill:HEX.red,'fill-opacity':.14,stroke:HEX.red,'stroke-opacity':.5,'stroke-width':1,rx:4}));
+    prof.appendChild(el('line',{x1:lx,y1:sy(GROUND),x2:lx,y2:sy(PLAT),stroke:HEX.column,'stroke-width':3}));
+    prof.appendChild(el('circle',{cx:lx,cy:sy(CANOPY_MID),r:5,fill:HEX.red}));
+    var lbl=el('text',{x:lx,y:sy(CANOPY_HI)-4,fill:HEX.red,'font-size':9,'font-family':'IBM Plex Mono, monospace','text-anchor':'middle'});
+    lbl.textContent='canopy'; prof.appendChild(lbl);
+    if(ev.blocked){
+      var tx=sx(ev.block);
+      prof.appendChild(el('rect',{x:tx-10,y:sy(TOWER_TOP),width:20,height:sy(GROUND)-sy(TOWER_TOP),
+        fill:HEX.towerblk,'fill-opacity':.35,stroke:HEX.towerblk,'stroke-opacity':.8,'stroke-width':1}));
+      var tl=el('text',{x:tx,y:sy(TOWER_TOP)-4,fill:'#7a839c','font-size':8.5,'font-family':'IBM Plex Mono, monospace','text-anchor':'middle'});
+      tl.textContent='towers'; prof.appendChild(tl);
+    }
+    var trd=ev.treeDeg*Math.PI/180, tanT=Math.tan(trd);
+    var yR=sy(Math.min(EYE+tanT*xMax,altTop));
+    prof.appendChild(el('path',{d:'M'+sx(0)+' '+sy(GROUND)+' L'+sx(0)+' '+sy(EYE)+' L'+sx(xMax)+' '+yR+' L'+sx(xMax)+' '+sy(GROUND)+' Z',
+      fill:HEX.tree,'fill-opacity':.16,stroke:HEX.tree,'stroke-opacity':.4,'stroke-width':1}));
+    for(var ti=0;ti<5;ti++){ var txp=sx(0)+8+ti*13, th=8+(ti%2)*3;
+      prof.appendChild(el('path',{d:'M'+txp+' '+sy(GROUND)+' l-5 0 l5 -'+th+' l5 '+th+' z',fill:HEX.tree,'fill-opacity':.55})); }
+    var tzl=el('text',{x:sx(0)+8,y:sy(GROUND)-40,fill:HEX.tree,'font-size':8.5,'font-family':'IBM Plex Mono, monospace'});
+    tzl.textContent=Math.round(ev.treeDeg)+'° treeline'; prof.appendChild(tzl);
+    prof.appendChild(el('circle',{cx:sx(0)+6,cy:sy(EYE),r:4,fill:hex}));
+    var vl=el('text',{x:sx(0)+6,y:sy(GROUND)+15,fill:HEX.muted,'font-size':9,'font-family':'IBM Plex Mono, monospace','text-anchor':'middle'});
+    vl.textContent='you'; prof.appendChild(vl);
+    prof.appendChild(el('line',{x1:sx(0)+6,y1:sy(EYE),x2:lx,y2:sy(CANOPY_MID),stroke:hex,'stroke-width':1.6,'stroke-dasharray':'5 4','stroke-opacity':.9}));
+    if(ev.blocked && ev.minClear<CANOPY_HI){
+      prof.appendChild(el('line',{x1:lx-20,y1:sy(ev.minClear),x2:lx+20,y2:sy(ev.minClear),stroke:HEX.red,'stroke-width':1.4,'stroke-dasharray':'3 3'}));
+      var ht=el('text',{x:lx-24,y:sy(ev.minClear)+3,fill:HEX.red,'font-size':8.5,'font-family':'IBM Plex Mono, monospace','text-anchor':'end'});
+      ht.textContent='clears here'; prof.appendChild(ht);
+    }
+  }
+
+  var spotsEl=document.getElementById('spots');
+  function renderSpots(){
+    spotsEl.innerHTML='';
+    SPOTS.forEach(function(sp){
+      var ev=sp._ev, hex=colHex(ev.color);
+      var row=document.createElement('div'); row.className='spot'; row.dataset.id=sp.id;
+      row.innerHTML='<span class="pin" style="color:'+hex+'">'+symFor(ev.color)+'</span>'+
+        '<div><div class="nm">'+sp.name+'</div>'+
+        '<div class="ds">'+ev.mi.toFixed(2)+' mi · face '+ev.bear.name+' · '+TREE[sp.trees].label+'</div></div>'+
+        '<div class="rt" style="color:'+hex+'">'+ev.label+'</div>';
+      row.addEventListener('click',function(){ selectSpot(sp); });
+      spotsEl.appendChild(row);
+    });
+  }
+  function markSel(id){
+    document.querySelectorAll('.spot').forEach(function(r){r.classList.toggle('sel',r.dataset.id===id);});
+    SPOTS.forEach(function(sp){ sp._marker.setIcon(badge(colHex(sp._ev.color),symFor(sp._ev.color),sp.id===id?'sel':'')); });
+  }
+  function clearSel(){ document.querySelectorAll('.spot').forEach(function(r){r.classList.remove('sel');});
+    SPOTS.forEach(function(sp){ sp._marker.setIcon(badge(colHex(sp._ev.color),symFor(sp._ev.color))); }); }
+  function selectSpot(sp){
+    treeState=sp.trees;
+    Array.prototype.forEach.call(document.querySelectorAll('#tsopts button'),function(b){
+      b.classList.toggle('on',b.getAttribute('data-t')===sp.trees);});
+    var ev=evaluate(sp._xy,TREE[sp.trees].deg);
+    var merged=Object.assign({},ev);
+    merged.note=ev.note+' <span style="color:var(--faint)">— '+sp.note+'</span>';
+    show(merged,sp._xy,sp.name);
+    markSel(sp.id); frame(sp._ll);
+  }
+
+  map.on('click',function(e){
+    var V=xy(e.latlng.lat,e.latlng.lng);
+    show(evaluate(V,TREE[treeState].deg),V,'dropped pin',null);
+    clearSel();
+  });
+
+  var addrIn=document.getElementById('addr'),addrBtn=document.getElementById('addrBtn'),aStat=document.getElementById('astatus');
+  function fetchJson(u){ return fetch(u,{headers:{'Accept':'application/json'}}).then(function(r){ if(!r.ok)throw new Error('http '+r.status); return r.json(); }); }
+  function geocodeOnce(q){
+    return fetchJson('/api/geocode?q='+encodeURIComponent(q))
+      .catch(function(){ return fetchJson('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=us&q='+encodeURIComponent(q)); })
+      .then(function(j){ if(!j||!j.length)return null; return {lat:parseFloat(j[0].lat),lng:parseFloat(j[0].lon),name:j[0].display_name}; });
+  }
+  function handleAddress(){
+    var q=(addrIn.value||'').trim();
+    if(!q){aStat.textContent='Type a street address first.';return;}
+    addrBtn.disabled=true; aStat.textContent='Locating…';
+    var hasRegion=/\b(in|indiana|46\d{3})\b/i.test(q);
+    geocodeOnce(q).then(function(hit){ if(!hit && !hasRegion) return geocodeOnce(q+', Fort Wayne, IN'); return hit; })
+    .then(function(hit){
+      if(!hit){aStat.textContent='No match. Add city and state, like “…, Fort Wayne, IN”.';return;}
+      var V=xy(hit.lat,hit.lng), ev=evaluate(V,TREE[treeState].deg);
+      var short=hit.name.split(',').slice(0,2).join(',').trim();
+      show(ev,V,short,{label:'HOME'});
+      clearSel(); frame([hit.lat,hit.lng]);
+      aStat.textContent=ev.mi.toFixed(2)+' mi from launch · face '+ev.bear.name+' ('+Math.round(ev.bear.deg)+'°)';
+    }).catch(function(){ aStat.textContent='Address lookup failed — tap the map instead.'; })
+    .then(function(){ addrBtn.disabled=false; });
+  }
+  addrBtn.addEventListener('click',handleAddress);
+  addrIn.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();handleAddress();}});
+  Array.prototype.forEach.call(document.querySelectorAll('#tsopts button'),function(b){
+    b.addEventListener('click',function(){ setTree(b.getAttribute('data-t')); });
+  });
+
+  renderSpots();
+  selectSpot(SPOTS[1]);
+})();
+</script>
+</body>
+</html>
