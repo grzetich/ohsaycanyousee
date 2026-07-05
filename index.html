@@ -6,6 +6,9 @@
 <title>Oh say can you see — Fort Wayne fireworks</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<!-- Vercel Web Analytics (enable it in the project's Analytics tab, then redeploy) -->
+<script>window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments);};</script>
+<script defer src="/_vercel/insights/script.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
@@ -116,6 +119,7 @@
   .fine b{color:var(--ink);font-weight:600;}
   .fine code{font-family:var(--mono);background:var(--panel-2);border:1px solid var(--panel-line);padding:1px 5px;border-radius:5px;font-size:11px;color:var(--blue);}
   .foot{margin-top:22px;color:var(--faint);font-size:11px;font-family:var(--mono);line-height:1.6;text-align:center;}
+  .foot a{color:var(--muted);text-decoration:none;border-bottom:1px solid var(--panel-line);}
 </style>
 </head>
 <body>
@@ -175,7 +179,7 @@
 <details>
   <summary>The model &amp; assumptions</summary>
   <p class="fine">
-    <b>Launch:</b> top of the Harrison Square parking garage, ~55 ft above street level, ground ~790 ft ASL. This year's show is <b>~4,900 lb</b> of shells.<br><br>
+    <b>Launch:</b> top of the Harrison Square parking garage (1210 S Harrison St), ~55 ft above street level, ground ~790 ft ASL. This year's show is <b>~4,900 lb</b> of shells.<br><br>
     <b>Burst altitude:</b> pyrotechnicians use ~<code>100 ft per inch</code> of shell diameter. A municipal show like this runs roughly 3″–8″ shells, so bursts sit about <b>300–900 ft above the garage</b> (≈1,100–1,750 ft ASL). The model treats that band as the canopy and ~1,450 ft ASL as the marquee height.<br><br>
     <b>Towers:</b> the downtown cluster (Anthony Wayne Building, Lincoln Tower, PNC, the 442‑ft I&amp;M Power Center) sits just northeast of the launch. If it falls between you and the garage, the low bursts hide and only the high shells clear. That's why south, west, and riverfront beat due‑northeast.<br><br>
     <b>Trees:</b> blocking is angular, <code>atan(height / distance)</code>. A tall tree right across the street can erase a show a mile off, while distance barely dents it. In July's full leaf, an unbroken tree line is modeled as a wall up to ~3° (open) / ~14° (scattered) / ~32° (leafy) above the horizon; if that beats the canopy's elevation angle from your spot, you need an opening aimed at the launch.<br><br>
@@ -183,13 +187,13 @@
   </p>
 </details>
 
-<p class="foot">Oh say can you see · v0.4 · map © OpenStreetMap, © CARTO<br>Launch data: City of Fort Wayne / Visit Fort Wayne, July 2026</p>
+<p class="foot">Oh say can you see · v0.4 · map © OpenStreetMap, © CARTO<br>Launch data: City of Fort Wayne / Visit Fort Wayne, July 2026<br>Built by Ed Grzetich · <a href="https://grzeti.ch">grzeti.ch</a> · <a href="mailto:you@example.com">you@example.com</a></p>
 
 <script>
 (function(){
   "use strict";
 
-  var LAT0=41.0761, LNG0=-85.1430, LAUNCH_LL=[LAT0,LNG0];
+  var LAT0=41.0753, LNG0=-85.1403, LAUNCH_LL=[LAT0,LNG0];  // 1210 S Harrison St — garage roof center
   var FT_LAT=364000, FT_LNG=364000*Math.cos(LAT0*Math.PI/180);
   function xy(lat,lng){ return { e:(lng-LNG0)*FT_LNG, n:(lat-LAT0)*FT_LAT }; }
   function invLL(e,n){ return [ LAT0 + n/FT_LAT, LNG0 + e/FT_LNG ]; }
@@ -197,7 +201,9 @@
   var GROUND=790, EYE=GROUND+5.5, PLAT=GROUND+55;
   var CANOPY_LOW=PLAT+250, CANOPY_HI=PLAT+900, CANOPY_MID=PLAT+600;
   var TOWER_TOP=GROUND+250;
-  var TOWERS=[ {e:500,n:500},{e:700,n:1600},{e:1600,n:1500},{e:1500,n:500} ];
+  // downtown tower cluster, anchored to real lat/lng so it stays put if the launch moves
+  var TOWERS_LL=[[41.07747,-85.14118],[41.08050,-85.14045],[41.08022,-85.13717],[41.07747,-85.13753]];
+  var TOWERS=TOWERS_LL.map(function(c){var p=xy(c[0],c[1]);return {e:p.e,n:p.n};});
 
   var TREE={ open:{deg:3,label:'open ground'}, scattered:{deg:14,label:'scattered trees'}, leafy:{deg:32,label:'leafy street'} };
   var treeState='scattered';
@@ -206,6 +212,7 @@
     faint:'#8a93ad',muted:'#566079',ground:'#cbd3e1',tree:'#64748b',column:'#9aa3bf',towerblk:'#94a3b8'};
   function colHex(c){return c==='var(--good)'?HEX.good:c==='var(--warn)'?HEX.warn:c==='var(--bad)'?HEX.bad:c;}
   function symFor(color){return color==='var(--good)'?'✓':color==='var(--bad)'?'✕':'!';}
+  function track(name,data){ try{ if(window.va) window.va('event',{name:name,data:data||{}}); }catch(e){} }
   function badge(hex,sym,extra){
     return L.divIcon({className:'badge-wrap',
       html:'<div class="badge'+(extra?' '+extra:'')+'" style="background:'+hex+'">'+sym+'</div>',
@@ -362,6 +369,7 @@
     Array.prototype.forEach.call(document.querySelectorAll('#tsopts button'),function(b){
       b.classList.toggle('on',b.getAttribute('data-t')===t);});
     reshow();
+    track('tree_set',{trees:t});
   }
 
   var NS='http://www.w3.org/2000/svg', prof=document.getElementById('prof');
@@ -438,12 +446,14 @@
     merged.note=ev.note+' <span style="color:var(--faint)">— '+sp.note+'</span>';
     show(merged,sp._xy,sp.name);
     markSel(sp.id); frame(sp._ll);
+    track('spot_select',{spot:sp.id,verdict:ev.label,trees:sp.trees});
   }
 
   map.on('click',function(e){
-    var V=xy(e.latlng.lat,e.latlng.lng);
-    show(evaluate(V,TREE[treeState].deg),V,'dropped pin',null);
+    var V=xy(e.latlng.lat,e.latlng.lng), ev=evaluate(V,TREE[treeState].deg);
+    show(ev,V,'dropped pin',null);
     clearSel();
+    track('map_tap',{verdict:ev.label,miles:Number(ev.mi.toFixed(1))});
   });
 
   var addrIn=document.getElementById('addr'),addrBtn=document.getElementById('addrBtn'),aStat=document.getElementById('astatus');
@@ -460,12 +470,13 @@
     var hasRegion=/\b(in|indiana|46\d{3})\b/i.test(q);
     geocodeOnce(q).then(function(hit){ if(!hit && !hasRegion) return geocodeOnce(q+', Fort Wayne, IN'); return hit; })
     .then(function(hit){
-      if(!hit){aStat.textContent='No match. Add city and state, like “…, Fort Wayne, IN”.';return;}
+      if(!hit){aStat.textContent='No match. Add city and state, like “…, Fort Wayne, IN”.'; track('address_check',{found:false}); return;}
       var V=xy(hit.lat,hit.lng), ev=evaluate(V,TREE[treeState].deg);
       var short=hit.name.split(',').slice(0,2).join(',').trim();
       show(ev,V,short,{label:'HOME'});
       clearSel(); frame([hit.lat,hit.lng]);
       aStat.textContent=ev.mi.toFixed(2)+' mi from launch · face '+ev.bear.name+' ('+Math.round(ev.bear.deg)+'°)';
+      track('address_check',{found:true,verdict:ev.label,miles:Number(ev.mi.toFixed(1))});
     }).catch(function(){ aStat.textContent='Address lookup failed — tap the map instead.'; })
     .then(function(){ addrBtn.disabled=false; });
   }
